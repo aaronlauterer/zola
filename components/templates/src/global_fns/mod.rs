@@ -11,6 +11,7 @@ use image;
 use image::GenericImageView;
 use library::{Library, Taxonomy};
 use utils::site::resolve_internal_link;
+use utils::fs::{find_related_assets};
 
 use imageproc;
 
@@ -374,6 +375,36 @@ impl TeraFn for GetTaxonomy {
                 Err(format!("`get_taxonomy` received an unknown taxonomy as kind: {}", kind).into())
             }
         }
+    }
+}
+
+#[derive(Debug)]
+pub struct GetSubdirAssets {
+    content_path: PathBuf,
+}
+
+impl GetSubdirAssets {
+    pub fn new(content_path: PathBuf) -> Self {
+        Self { content_path }
+    }
+}
+
+impl TeraFn for GetSubdirAssets {
+    fn call(&self, args: &HashMap<String, Value>) -> Result<Value> {
+        let path = required_arg!(
+            String,
+            args.get("path"),
+            "`get_files` requires a `path` argument with a string value"
+        );
+        let src_path = self.content_path.join(&path);
+
+        if !src_path.exists() {
+            return Err(format!("`get_files`: Cannot find path: {}", path).into());
+        }
+
+        let assets = find_related_assets(&src_path);
+        let ret = to_value(assets).unwrap();
+        Ok(ret)
     }
 }
 
